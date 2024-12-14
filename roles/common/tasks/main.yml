@@ -1,0 +1,10 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install common tools
+  apt:
+    name:
+      - vim
+      - wget
+    state: present

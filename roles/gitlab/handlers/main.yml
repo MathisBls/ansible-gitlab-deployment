@@ -1,0 +1,3 @@
+- name: Restart GitLab
+  command: gitlab-ctl reconfigure
+  become: yes

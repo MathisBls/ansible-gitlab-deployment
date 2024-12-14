@@ -1,0 +1,78 @@
+- name: Install PostgreSQL
+  ansible.builtin.package:
+    name: postgresql
+    state: present
+
+- name: Ensure psycopg2 is installed
+  ansible.builtin.package:
+    name: python3-psycopg2
+    state: present
+  become: yes
+
+- name: Ensure PostgreSQL service is running
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Replace 127.0.0.1/32 with 0.0.0.0/0 in pg_hba.conf
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/15/main/pg_hba.conf
+    regexp: '^host\s+all\s+all\s+127\.0\.0\.1\/32'
+    line: 'host    all             all             0.0.0.0/0                 trust'
+    state: present
+  notify: Restart PostgreSQL
+  become: yes
+
+- name: Replace peer with trust for postgres user
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/15/main/pg_hba.conf
+    regexp: '^local\s+all\s+postgres\s+peer'
+    line: 'local   all             postgres                                trust'
+    state: present
+  notify: Restart PostgreSQL
+  become: yes
+
+- name: Add trust authentication for all users locally
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/15/main/pg_hba.conf
+    regexp: '^local\s+all\s+all\s+peer'
+    line: 'local   all             all                                     trust'
+    state: present
+  notify: Restart PostgreSQL
+  become: yes
+
+- name: Create databases manually if not exists
+  ansible.builtin.shell:
+    cmd: "psql -tc \"SELECT 1 FROM pg_database WHERE datname='{{ item }}'\" | grep -q 1 || createdb {{ item }}"
+  loop:
+    - all
+    - dev
+    - stage
+    - prod
+  become: yes
+  become_user: postgres
+
+- name: Create user vagrant with all privileges on all DBs if not exists
+  ansible.builtin.shell:
+   cmd: psql -tc "SELECT 1 FROM pg_roles WHERE rolname='vagrant'" | grep -q 1 || psql -c "CREATE USER vagrant WITH SUPERUSER;"
+  become: yes
+  become_user: postgres
+
+- name: Grant privileges to vagrant for DB all
+  ansible.builtin.shell:
+   cmd: "psql -c \"GRANT ALL PRIVILEGES ON DATABASE \\\"all\\\" TO vagrant;\""
+  become: yes
+  become_user: postgres
+
+- name: Assign vagrant as owner of dev, stage, and prod databases
+  ansible.builtin.shell:
+    cmd: "psql -c \"ALTER DATABASE {{ item }} OWNER TO vagrant;\""
+  loop:
+    - dev
+    - stage
+    - prod
+  become: yes
+  become_user: postgres
+

@@ -1,0 +1,2 @@
+gitlab_http: gitlab.vlne.lan
+gitlab_storage: "/var/opt/gitlab/git-data"

@@ -1,0 +1,34 @@
+- name: Download GitLab install
+  get_url:
+    url: https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
+    dest: /tmp/gitlab-install.sh
+    mode: '0755'
+
+- name: Run GitLab install script
+  command: bash /tmp/gitlab-install.sh
+
+- name: Update apt cache after GitLab script
+  apt:
+    update_cache: yes
+
+- name: Install Gitlab
+  apt:
+    name: gitlab-ee
+    state: present
+
+- name: Configure GitLab domain
+  lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: '^external_url'
+    line: "external_url 'http://{{ gitlab_http }}'"
+  notify: Restart GitLab
+  become: yes
+
+- name: Configure GitLab storage path
+  lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: '^git_data_dirs'
+    line: 'git_data_dirs({"default" => {"path" => "{{ gitlab_storage }}"}})'
+  notify: Restart GitLab
+  become: yes
+

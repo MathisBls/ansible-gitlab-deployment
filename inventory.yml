@@ -1,0 +1,13 @@
+all:
+  children:
+    gitlab:
+      hosts:
+        gitlab-server:
+          ansible_host: 192.168.74.131
+          ansible_user: root
+    postgres:
+      hosts:
+        postgres-server:
+          ansible_host: 192.168.74.130
+          ansible_user: root
+          ansible_python_interpreter: /usr/bin/python3
